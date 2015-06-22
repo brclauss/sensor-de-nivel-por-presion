@@ -14,8 +14,9 @@ Change History:
 Rev   Date         Description
 ---   ----------   ---------------
 1.0   01/05/2015   Initial release.
-1.1   25/05/2015   Prueba de hardware
-1.2   15/06/2015   Lectura de presion, calculo de altura y comparación con valor seteado
+1.1   25/05/2015   Prueba de hardware.
+1.2   15/06/2015   Lectura de presion, calculo de altura y comparación con valor seteado.
+1.3   22/06/2015   Envio de datos via puerto serie.
 
 *************************************/
 
@@ -54,6 +55,18 @@ int Potes = 0;
 
 byte b_Leer_Base = 1;
 
+// Timers en ms
+unsigned long T_Dato_Serie = 1000;
+
+// Variables para Timer
+boolean M_Timer_1 = 1;
+unsigned long M_Time_1 = 0;
+unsigned long TIMER_01 = 0;  // Variable to hold elapsed time for Timer 1
+
+
+// Prototipos de Funciones
+unsigned long timerPulse(boolean &timeractive, unsigned long &timeactual, unsigned long &timerState, unsigned long timerPeriod);	// Temporizador de pulso
+
 void setup()
 {
 	Serial.begin(9600);				// Inicializa puerto serie
@@ -90,10 +103,12 @@ void loop()
 		digitalWrite(LQ0_0, LOW);					// Apaga led de salida Q0_0
 	}
 	
-	
-	
-	
-	Serial.println(d_Presion);						// Transmite dato de presion medida
+	if (M_Timer_1 == 1)
+	{
+		Serial.println(d_Presion);						// Transmite dato de presion medida
+		Serial.println(d_Altura);						// Transmite dato de presion medida
+	}
+	timerPulse(M_Timer_1, M_Time_1, TIMER_01, T_Dato_Serie);
 }
 
 // Funciones locales
@@ -160,4 +175,38 @@ void ReadSensor()
 		else Serial.println("error en la lectura de temperatura\n");
 	}
 	else Serial.println("error iniciando la lectura de temperatura\n");
+}
+
+// Temporizador tipo pulso
+unsigned long timerPulse(boolean &timeractive, unsigned long &timeactual, unsigned long &timerState, unsigned long timerPeriod)
+{
+	if ((timeractive == 0) & (timerState == 0))				// Timer is either not triggered or finished
+	{
+		timerState = 0;
+		timeactual = 0;										// Clear timerState (0 = 'not started')
+	}
+	else                                                    // Timer is enabled
+	{
+		if (timerState == 0)								// Timer hasn't started counting yet
+		{
+			timerState = millis();							// Set timerState to current time in milliseconds
+			timeractive = 0;
+			timeactual = 0;									// Result = 'not finished' (0)
+		}
+		else                                                // Timer is active and counting
+		{
+			if (millis() > (timerState + timerPeriod))		// Timer has finished
+			{
+				timeractive = 1;							// Pulse = 'finished' (0)
+				timerState = 0;
+			}
+			else
+			{												// Timer has not finished
+				timeractive = 0;							// Pulse = 'Active' (1)
+			}
+			timeactual = (millis() - timerState) / 1000;
+		}
+	}
+	return(timeactual);										// Return result (1 = 'finished',
+	// 0 = 'not started' / 'not finished')
 }
