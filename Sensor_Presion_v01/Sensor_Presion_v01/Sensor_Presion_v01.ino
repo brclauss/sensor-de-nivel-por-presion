@@ -17,6 +17,8 @@ Rev   Date         Description
 1.1   25/05/2015   Prueba de hardware.
 1.2   15/06/2015   Lectura de presion, calculo de altura y comparación con valor seteado.
 1.3   22/06/2015   Envio de datos via puerto serie.
+1.4   27/06/2015   Se implemento timer de pulso y retardo a la conexion.
+1.5   29/06/2015   Se implemento funcion parpadeo para salidas, la comparación se hace por histeresis.
 
 *************************************/
 
@@ -49,6 +51,7 @@ char status;
 double d_Presion_Base = 0;
 double d_Presion = 0;
 double d_Altura = 0;
+double d_Histeresis = 10;
 
 int Pulsador = 0;
 int Potes = 0;
@@ -57,15 +60,25 @@ byte b_Leer_Base = 1;
 
 // Timers en ms
 unsigned long T_Dato_Serie = 1000;
+unsigned long T_Reset_Cero = 3000;
 
 // Variables para Timer
 boolean M_Timer_1 = 1;
 unsigned long M_Time_1 = 0;
 unsigned long TIMER_01 = 0;  // Variable to hold elapsed time for Timer 1
 
+boolean M_Timer_2 = 0;
+unsigned long M_Time_2 = 0;
+unsigned long TIMER_02 = 0;  // Variable to hold elapsed time for Timer 2
+
+boolean b_Indica_Ajuste = 0;
+byte Pulsos = 0;
+unsigned long TIMER_03 = 0;
 
 // Prototipos de Funciones
 unsigned long timerPulse(boolean &timeractive, unsigned long &timeactual, unsigned long &timerState, unsigned long timerPeriod);	// Temporizador de pulso
+unsigned long timerOn(boolean &timeractive, unsigned long &timeactual, unsigned long &timerState, unsigned long timerPeriod);		// Temporizador de retardo a la conección
+void parpadeo(boolean &ParpadeoActivo, byte salida, byte &PulsosActual, byte CantidadPulsos, unsigned long &timerState, unsigned long TimePeriod);		// Hace parpadear una salida
 
 void setup()
 {
@@ -80,8 +93,12 @@ void setup()
 
 void loop()
 {
-	digitalWrite(Run, HIGH);						// Enciende led de RUN
-	if (b_Leer_Base)
+	if (b_Indica_Ajuste == 0)
+	{
+		digitalWrite(Run, HIGH);						// Enciende led de RUN
+	}
+	
+	if (b_Leer_Base == 1)
 	{
 		ReadSensor();								// Se hace lectura del sensor
 		d_Presion_Base = Presion;
@@ -91,22 +108,33 @@ void loop()
 	d_Presion = Presion;
 	Potes = analogRead(Pote);						// Se lee seteo de potenciometro
 	Pulsador = digitalRead(Cero);					// Se lee estado del pulsador
+	M_Timer_2 = !Pulsador;
 	d_Altura = (d_Presion - d_Presion_Base)*10.2;	// Calculo de altura
 	if (d_Altura >= Potes)							// Compara altura seteada con altura medida
 	{
 		digitalWrite(Q0_0, HIGH);					// Activa salida
 		digitalWrite(LQ0_0, HIGH);					// Enciende led de salida Q0_0
 	}
-	else
+	if(d_Altura < (Potes-d_Histeresis))
 	{
 		digitalWrite(Q0_0, LOW);					// Desactiva salida
 		digitalWrite(LQ0_0, LOW);					// Apaga led de salida Q0_0
 	}
 	
+	timerOn(M_Timer_2, M_Time_2, TIMER_02, T_Reset_Cero);
+	if (M_Timer_2 == 1)
+	{
+		b_Leer_Base = 1;
+		b_Indica_Ajuste = 1;
+	}
+	
+	parpadeo(b_Indica_Ajuste, Run, Pulsos, 3, TIMER_03, 200);		// Hace parpadear una salida
+	
 	if (M_Timer_1 == 1)
 	{
 		Serial.println(d_Presion);						// Transmite dato de presion medida
 		Serial.println(d_Altura);						// Transmite dato de presion medida
+		Serial.println(Potes);
 	}
 	timerPulse(M_Timer_1, M_Time_1, TIMER_01, T_Dato_Serie);
 }
@@ -210,3 +238,69 @@ unsigned long timerPulse(boolean &timeractive, unsigned long &timeactual, unsign
 	return(timeactual);										// Return result (1 = 'finished',
 	// 0 = 'not started' / 'not finished')
 }
+
+// Temporizador de retardo a la conección
+unsigned long timerOn(boolean &timeractive, unsigned long &timeactual, unsigned long &timerState, unsigned long timerPeriod)
+{
+	if (timeractive == 0)
+	{														// timer is disabled
+		timerState = 0;										// Clear timerState (0 = 'not started')
+		timeactual = 0;
+	}
+	else 
+	{														// Timer is enabled
+		if (timerState == 0)
+		{													// Timer hasn't started counting yet
+			timerState = millis();							// Set timerState to current time in milliseconds
+			timeractive = 0;								// Result = 'not finished' (0)
+			timeactual = 0;
+		}
+		else
+		{													// Timer is active and counting
+			if (millis() > (timerState + timerPeriod))
+			{												// Timer has finished
+				timeractive = 1;							// Result = 'finished' (1)
+				timerState = 0;
+			}
+			else
+			{												// Timer has not finished
+				timeractive = 0;							// Result = 'not finished' (0)
+			}
+			timeactual = (millis() - timerState) / 1000;
+		}
+	}
+	return(timeactual);										// Return result (1 = 'finished',
+	// 0 = 'not started' / 'not finished')
+}
+
+// Hace parpadear una salida
+void parpadeo(boolean &ParpadeoActivo, byte salida, byte &PulsosActual, byte CantidadPulsos, unsigned long &timerState, unsigned long TimePeriod)
+{
+	boolean TimerActive = 1;
+	unsigned long TimeActual = 0;
+	CantidadPulsos = (CantidadPulsos * 2) - 1;
+	boolean b_EstadoSalida = 0;
+	
+	if (ParpadeoActivo == 1)
+	{
+		if (PulsosActual == 0)
+		{
+			digitalWrite(salida, HIGH);
+		}
+		timerPulse(TimerActive, TimeActual, timerState, TimePeriod);
+		if (TimerActive == 1)
+		{
+			PulsosActual++;
+			TimerActive = 0;
+			b_EstadoSalida = digitalRead(salida);
+			b_EstadoSalida = !b_EstadoSalida;
+			digitalWrite(salida, b_EstadoSalida);
+		}
+		if (PulsosActual >= CantidadPulsos)
+		{
+			PulsosActual = 0;
+			ParpadeoActivo = 0;
+			digitalWrite(salida, LOW);
+		}
+	}
+}	
