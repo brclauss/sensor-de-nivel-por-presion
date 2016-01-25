@@ -15,18 +15,19 @@ Rev   Date         Description
 ---   ----------   ---------------
 1.0   01/05/2015   Initial release.
 1.1   25/05/2015   Prueba de hardware.
-1.2   15/06/2015   Lectura de presion, calculo de altura y comparación con valor seteado.
+1.2   15/06/2015   Lectura de presion, calculo de altura y comparacion con valor seteado.
 1.3   22/06/2015   Envio de datos via puerto serie.
 1.4   27/06/2015   Se implemento timer de pulso y retardo a la conexion.
-1.5   29/06/2015   Se implemento funcion parpadeo para salidas, la comparación se hace por histeresis.
+1.5   29/06/2015   Se implemento funcion parpadeo para salidas, la comparacion se hace por histeresis.
+1.6   25/01/2016   Se implemento un delay al inicio para permitir estabilizar la tension de alimentaciÃ³n.
 
 *************************************/
 
-// Se importan las librerías
+// Se importan las librerias
 #include <SFE_BMP180.h>
 #include <Wire.h>
 
-// Se declara una instancia de la librería
+// Se declara una instancia de la libreria
 SFE_BMP180 pressure;
 
 // Defines
@@ -37,17 +38,17 @@ SFE_BMP180 pressure;
 #define Cero  15	// Ajuste de cero
 #define Pote  A3	// Ajuste de sensibilidad
 
-// Se declaran las variables. Es necesario tomar en cuenta una presión inicial
-// esta será la presión que se tome en cuenta en el cálculo de la diferencia de altura
+// Se declaran las variables. Es necesario tomar en cuenta una presion inicial
+// esta sera la presion que se tome en cuenta en el calculo de la diferencia de altura
 double PresionBase;
 
-// Leeremos presión y temperatura. Calcularemos la diferencia de altura
+// Leeremos presion y temperatura. Calcularemos la diferencia de altura
 double Presion = 0;
 double Altura = 0;
 double Temperatura = 0;
 char status;
 
-// Variables para la aplicación
+// Variables para la aplicacion
 double d_Presion_Base = 0;
 double d_Presion = 0;
 double d_Altura = 0;
@@ -77,11 +78,12 @@ unsigned long TIMER_03 = 0;
 
 // Prototipos de Funciones
 unsigned long timerPulse(boolean &timeractive, unsigned long &timeactual, unsigned long &timerState, unsigned long timerPeriod);	// Temporizador de pulso
-unsigned long timerOn(boolean &timeractive, unsigned long &timeactual, unsigned long &timerState, unsigned long timerPeriod);		// Temporizador de retardo a la conección
+unsigned long timerOn(boolean &timeractive, unsigned long &timeactual, unsigned long &timerState, unsigned long timerPeriod);		// Temporizador de retardo a la conecciï¿½n
 void parpadeo(boolean &ParpadeoActivo, byte salida, byte &PulsosActual, byte CantidadPulsos, unsigned long &timerState, unsigned long TimePeriod);		// Hace parpadear una salida
 
 void setup()
 {
+	delay(5000);
 	Serial.begin(9600);				// Inicializa puerto serie
 	SensorStart();					// Se inicia el sensor y se hace una lectura inicial
 	pinMode(LQ0_0, OUTPUT);			// Inicializa salidas digitales
@@ -89,6 +91,7 @@ void setup()
 	pinMode(Q0_0, OUTPUT);
 	pinMode(Run, OUTPUT);
 	pinMode(Cero, INPUT);			// Inicializa entradas digitales
+	delay(5000);
 }
 
 void loop()
@@ -164,7 +167,7 @@ void SensorStart()
 			if (status != 0)
 			{
 				delay(status);
-				// Se lee la presión inicial incidente sobre el sensor en la primera ejecución
+				// Se lee la presion inicial incidente sobre el sensor en la primera ejecucion
 				status = pressure.getPressure(PresionBase, Temperatura);
 			}
 		}
@@ -173,7 +176,7 @@ void SensorStart()
 
 void ReadSensor()
 {
-	// En este método se hacen las lecturas de presión y temperatura y se calcula la altura
+	// En este metodo se hacen las lecturas de presion y temperatura y se calcula la altura
 	// Se inicia la lectura de temperatura
 	status = pressure.startTemperature();
 	if (status != 0)
@@ -183,17 +186,17 @@ void ReadSensor()
 		status = pressure.getTemperature(Temperatura);
 		if (status != 0)
 		{
-			// Se inicia la lectura de presión
+			// Se inicia la lectura de presion
 			status = pressure.startPressure(3);
 			if (status != 0)
 			{
 				delay(status);
-				// Se lleva a cabo la lectura de presión,
-				// considerando la temperatura que afecta el desempeño del sensor
+				// Se lleva a cabo la lectura de presion,
+				// considerando la temperatura que afecta el desempeÃ±o del sensor
 				status = pressure.getPressure(Presion, Temperatura);
 				if (status != 0)
 				{
-					// Se hace el cálculo de la altura en base a la presión leída en el Setup
+					// Se hace el calculo de la altura en base a la presion leida en el Setup
 					Altura = pressure.altitude(Presion, PresionBase);
 				}
 				else Serial.println("error en la lectura de presion\n");
@@ -239,7 +242,7 @@ unsigned long timerPulse(boolean &timeractive, unsigned long &timeactual, unsign
 	// 0 = 'not started' / 'not finished')
 }
 
-// Temporizador de retardo a la conección
+// Temporizador de retardo a la conecciï¿½n
 unsigned long timerOn(boolean &timeractive, unsigned long &timeactual, unsigned long &timerState, unsigned long timerPeriod)
 {
 	if (timeractive == 0)

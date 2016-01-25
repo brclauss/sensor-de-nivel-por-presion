@@ -10,10 +10,16 @@
 
 #define __AVR_ATmega32u4__
 #define __AVR_ATmega32U4__
-#define ARDUINO 106
+#define ARDUINO 167
 #define ARDUINO_MAIN
 #define F_CPU 16000000L
 #define __AVR__
+#define F_CPU 16000000L
+#define ARDUINO 167
+#define ARDUINO_AVR_LEONARDO
+#define ARDUINO_ARCH_AVR
+#define USB_VID 0x2341
+#define USB_PID 0x8036
 extern "C" void __cxa_pure_virtual() {;}
 
 //
@@ -21,6 +27,6 @@ extern "C" void __cxa_pure_virtual() {;}
 void SensorStart();
 void ReadSensor();
 
-#include "C:\Program Files (x86)\Arduino\hardware\arduino\variants\leonardo\pins_arduino.h" 
-#include "C:\Program Files (x86)\Arduino\hardware\arduino\cores\arduino\arduino.h"
+#include "C:\Program Files (x86)\Arduino\hardware\arduino\avr\variants\leonardo\pins_arduino.h" 
+#include "C:\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\arduino.h"
 #include <Sensor_Presion_v01.ino>
